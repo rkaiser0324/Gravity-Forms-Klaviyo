@@ -70,31 +70,55 @@ class GFKlaviyoAPI extends GFFeedAddOn {
 
 		}
 
+		
 		// Send the values to the third-party service.
         if ($this->get_plugin_setting('api_key')) {
             $tracker = new Klaviyo($this->get_plugin_setting('api_key'));
+
+            $properties=array('$email' => $merge_vars['email'], '$first_name' => $merge_vars['first_name'], '$last_name' => $merge_vars['last_name']);
+            
+            $properties=array_merge($properties, $merge_vars);
+         
             $tracker->track (
                 'Active on Site',
-                array('$email' => $merge_vars['email'], '$first_name' => $merge_vars['first_name'], '$last_name' => $merge_vars['last_name'])
+                $properties
+                
             // array('Item SKU' => 'ABC123', 'Payment Method' => 'Credit Card'),
             // 1354913220
             );
         }
-
+        
         if ($this->get_plugin_setting('private_api_key')) {
-        	$url = 'https://a.klaviyo.com/api/v1/list/' .$list_id. '/members';
+        	
+        	$url = 'https://a.klaviyo.com/api/v2/list/' .$list_id. '/members';
 
-        	wp_remote_post($url,array(
-        		'body' => array(
-        			'api_key' => $this->get_plugin_setting('private_api_key'),
-        			'email' => $merge_vars['email'],
-        			'properties' => json_encode(array(
-        				'$first_name' => $merge_vars['first_name'],
-        				'$last_name' => $merge_vars['last_name']
-        			)),
-        			'confirm_optin' => 'false'
-        		)
-        	));
+        	$post_data = array(
+				'api_key' => $this->get_plugin_setting('private_api_key'),
+				'profiles' => array(array(
+					'email' => $merge_vars['email'],
+					'$consent' => 'email',
+					'$source' => 'GravityForms: ' . $form['title']
+				))
+			);
+
+        	if(isset($merge_vars['first_name']))
+				$post_data['profiles'][0]['$first_name'] = $merge_vars['first_name'];
+
+			if(isset($merge_vars['last_name']))
+				$post_data['profiles'][0]['$last_name'] = $merge_vars['last_name'];
+			
+        	$response = wp_safe_remote_post($url, array(
+				'method' => 'POST',
+				'headers' => array('content-type' => 'application/json'),
+				'body' => json_encode($post_data)
+			));
+			
+			//If the Klaviyo API returns a code anything other than OK, log it!
+			if($response['response']['code'] != 200) {
+				$this->log_error( __METHOD__ . '(): Could not add user to mailing list' );
+				$this->log_error( __METHOD__ . '(): response => ' . print_r( $response, true ) );
+			}
+        	
         }
 	}
 
@@ -196,6 +220,7 @@ class GFKlaviyoAPI extends GFFeedAddOn {
                                 'label'    => esc_html__( 'Last Name', 'klaviyoaddon' ),
                                 'required' => true
                             ),
+                            
 						),
 					),
 					array(
@@ -265,26 +290,27 @@ class GFKlaviyoAPI extends GFFeedAddOn {
         $private_key = $this->get_plugin_setting('private_api_key');
 
         if ($private_key) {
-			$url = 'https://a.klaviyo.com/api/v1/lists?api_key=' . $private_key;
+			$url = 'https://a.klaviyo.com/api/v2/lists?api_key=' . $private_key;
 	       	$response = wp_remote_get($url);
-
+	       	
 	       	$data = json_decode($response['body']);
-
+	       	
             /* Get available Klaviyo lists. */
-	        $ac_lists = $data->data;
+	        $ac_lists = $data;
 
 	        /* Add Klaviyo lists to array and return it. */
 	        $lists = array();
             foreach ( $ac_lists as $list ) {
-                if ($list->list_type == 'list') {
-                    $lists[] = array(
-                        'label' => $list->name,
-                        'value' => $list->id
-                    );
-                }
+
+              
+	            $lists[] = array(
+	                'label' => $list->list_name,
+	                'value' => $list->list_id
+	            );
+                
             }
         }
-
+       
        return $lists;
     }
 }
