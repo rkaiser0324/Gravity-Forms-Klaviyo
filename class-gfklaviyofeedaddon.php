@@ -203,7 +203,7 @@ class GFKlaviyoAPI extends GFFeedAddOn {
 						'name'      => 'mappedFields',
 						'label'     => esc_html__( 'Map Fields', 'klaviyoaddon' ),
 						'type'      => 'field_map',
-						'field_map' => array(
+						'field_map' => apply_filters('gravityforms_klaviyo_mapped_fields', array(
 							array(
 								'name'       => 'email',
 								'label'      => esc_html__( 'Email', 'klaviyoaddon' ),
@@ -221,7 +221,7 @@ class GFKlaviyoAPI extends GFFeedAddOn {
                                 'required' => true
                             ),
                             
-						),
+						)),
 					),
 					array(
 						'name'           => 'condition',
@@ -292,22 +292,20 @@ class GFKlaviyoAPI extends GFFeedAddOn {
         if ($private_key) {
 			$url = 'https://a.klaviyo.com/api/v2/lists?api_key=' . $private_key;
 	       	$response = wp_remote_get($url);
-	       	
-	       	$data = json_decode($response['body']);
-	       	
-            /* Get available Klaviyo lists. */
-	        $ac_lists = $data;
+            if (!is_wp_error($response)) {
+                $data = json_decode($response['body']);
+               
+                /* Get available Klaviyo lists. */
+                $ac_lists = $data;
 
-	        /* Add Klaviyo lists to array and return it. */
-	        $lists = array();
-            foreach ( $ac_lists as $list ) {
-
-              
-	            $lists[] = array(
-	                'label' => $list->list_name,
-	                'value' => $list->list_id
-	            );
-                
+                /* Add Klaviyo lists to array and return it. */
+                $lists = array();
+                foreach ($ac_lists as $list) {
+                    $lists[] = array(
+                    'label' => $list->list_name,
+                    'value' => $list->list_id
+                );
+                }
             }
         }
        
