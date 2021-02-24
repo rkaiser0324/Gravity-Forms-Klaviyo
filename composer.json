@@ -1,0 +1,11 @@
+{
+    "name": "efetechnology/gf-klaviyo-add-on",
+    "type": "wordpress-plugin",
+    "description": "Gravity Forms Klaviyo Add-On",
+    "config": {
+        "preferred-install": "source"
+    },
+    "require": {
+        "composer/installers": "1.*"
+    }
+}
