@@ -21,7 +21,8 @@ class Klaviyo {
         if (!is_null($timestamp)) {
             $params['time'] = $timestamp;
         }
-        $encoded_params = $this->build_params($params);
+
+        $encoded_params = $this->build_params(apply_filters('gravityforms_klaviyo_params', $params));
         return $this->make_request('api/track', $encoded_params);
     }
     function track_once($event, $customer_properties=array(), $properties=array(), $timestamp=NULL) {
